@@ -439,7 +439,8 @@ def getSettings():
 			"waitForStart": s.getBoolean(["feature", "waitForStartOnConnect"]),
 			"alwaysSendChecksum": s.getBoolean(["feature", "alwaysSendChecksum"]),
 			"resetLineNumbersWithPrefixedN": s.getBoolean(["feature", "resetLineNumbersWithPrefixedN"]),
-			"sdSupport": s.getBoolean(["feature", "sdSupport"])
+			"sdSupport": s.getBoolean(["feature", "sdSupport"]),
+			"grbl": s.getBoolean(["feature", "grbl"])
 		},
 		"folder": {
 			"uploads": s.getBaseFolder("uploads"),
@@ -486,6 +487,7 @@ def setSettings():
 			if "alwaysSendChecksum" in data["feature"].keys(): s.setBoolean(["feature", "alwaysSendChecksum"], data["feature"]["alwaysSendChecksum"])
 			if "resetLineNumbersWithPrefixedN" in data["feature"].keys(): s.setBoolean(["feature", "resetLineNumbersWithPrefixedN"], data["feature"]["resetLineNumbersWithPrefixedN"])
 			if "sdSupport" in data["feature"].keys(): s.setBoolean(["feature", "sdSupport"], data["feature"]["sdSupport"])
+			if "grbl" in data["feature"].keys(): s.setBoolean(["feature", "grbl"], data["feature"]["grbl"])
 
 		if "folder" in data.keys():
 			if "uploads" in data["folder"].keys(): s.setBaseFolder("uploads", data["folder"]["uploads"])

@@ -24,7 +24,7 @@ def settings(init=False, configfile=None, basedir=None):
 default_settings = {
 	"serial": {
 		"port": None,
-		"baudrate": None
+		"baudrate": 9600
 	},
 	"server": {
 		"host": "0.0.0.0",
@@ -38,12 +38,13 @@ default_settings = {
 		"watermark": True
 	},
 	"feature": {
-		"gCodeVisualizer": True,
+		"gCodeVisualizer": False,
 		"waitForStartOnConnect": False,
 		"waitForWaitOnConnect": False,
 		"alwaysSendChecksum": False,
 		"resetLineNumbersWithPrefixedN": False,
-		"sdSupport": True
+		"sdSupport": False,
+		"grbl": True
 	},
 	"folder": {
 		"uploads": None,

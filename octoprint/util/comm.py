@@ -376,6 +376,7 @@ class MachineCom(object):
 		self._printStartTime = None
 
 		self._alwaysSendChecksum = settings().getBoolean(["feature", "alwaysSendChecksum"])
+		self._grbl = settings().getBoolean(["feature", "grbl"])
 		self._currentLine = 1
 		self._resendDelta = None
 		self._lastLines = []
@@ -679,7 +680,10 @@ class MachineCom(object):
 						self._baudrateDetectRetry -= 1
 						self._serial.write('\n')
 						self._log("Baudrate test retry: %d" % (self._baudrateDetectRetry))
-						self._sendCommand("M105")
+						if self._grbl:
+							self._sendCommand("$")
+						else:
+							self._sendCommand("M105")
 						self._testingBaudrate = True
 					else:
 						baudrate = self._baudrateDetectList.pop(0)
@@ -691,10 +695,16 @@ class MachineCom(object):
 							self._baudrateDetectTestOk = 0
 							timeout = time.time() + 5
 							self._serial.write('\n')
-							self._sendCommand("M105")
+							if self._grbl:
+								self._sendComamnd("$")
+							else:
+								self._sendCommand("M105")
 							self._testingBaudrate = True
 						except:
 							self._log("Unexpected error while setting baudrate: %d %s" % (baudrate, getExceptionString()))
+				elif self._grbl and '$$' in line:
+					self._log("Baudrate test ok: %d" % (self._baudrateDetectTestOk))
+					self._changeState(self.STATE_OPERATIONAL)
 				elif 'ok' in line and 'T:' in line:
 					self._baudrateDetectTestOk += 1
 					if self._baudrateDetectTestOk < 10:
@@ -709,14 +719,19 @@ class MachineCom(object):
 
 			### Connection attempt
 			elif self._state == self.STATE_CONNECTING:
-				if (line == "" or "wait" in line) and startSeen:
-					self._sendCommand("M105")
-				elif "start" in line:
-					startSeen = True
-				elif "ok" in line and startSeen:
-					self._changeState(self.STATE_OPERATIONAL)
-				elif time.time() > timeout:
-					self.close()
+				if self._grbl:
+					if "Grbl" in line:
+						self._changeState(self.STATE_OPERATIONAL)
+				else:
+					if (line == "" or "wait" in line) and startSeen:
+						if not self._grbl:
+							self._sendCommand("M105")
+					elif "start" in line:
+						startSeen = True
+					elif "ok" in line and startSeen:
+						self._changeState(self.STATE_OPERATIONAL)
+					elif time.time() > timeout:
+						self.close()
 
 			### Operational
 			elif self._state == self.STATE_OPERATIONAL or self._state == self.STATE_PAUSED:
@@ -727,7 +742,8 @@ class MachineCom(object):
 					elif not self._commandQueue.empty():
 						self._sendCommand(self._commandQueue.get())
 					else:
-						self._sendCommand("M105")
+						if not self._grbl:
+							self._sendCommand("M105")
 					tempRequestTimeout = time.time() + 5
 				# resend -> start resend procedure from requested line
 				elif "resend" in line.lower() or "rs" in line:
@@ -741,7 +757,8 @@ class MachineCom(object):
 
 				if self._sdPrinting:
 					if time.time() > tempRequestTimeout:
-						self._sendCommand("M105")
+						if not self._grbl:
+							self._sendCommand("M105")
 						tempRequestTimeout = time.time() + 5
 
 					if time.time() > sdStatusRequestTimeout:
@@ -753,7 +770,8 @@ class MachineCom(object):
 				else:
 					# Even when printing request the temperature every 5 seconds.
 					if time.time() > tempRequestTimeout:
-						self._commandQueue.put("M105")
+						if not self._grbl:
+							self._commandQueue.put("M105")
 						tempRequestTimeout = time.time() + 5
 
 					if 'ok' in line:
@@ -905,7 +923,10 @@ class MachineCom(object):
 				lineNumber = self._gcodePos
 			self._addToLastLines(cmd)
 			self._currentLine += 1
-			self._doSendWithChecksum(cmd, lineNumber)
+			if self._grbl:
+				self._doSendWithoutChecksum(cmd)
+			else:
+				self._doSendWithChecksum(cmd, lineNumber)
 		else:
 			self._doSendWithoutChecksum(cmd)
 
@@ -947,7 +968,8 @@ class MachineCom(object):
 			try:
 				if matchesGcode(line, "M0") or matchesGcode(line, "M1"):
 					self.setPause(True)
-					line = "M105" # Don't send the M0 or M1 to the machine, as M0 and M1 are handled as an LCD menu pause.
+					if not self._grbl:
+						line = "M105" # Don't send the M0 or M1 to the machine, as M0 and M1 are handled as an LCD menu pause.
 				if self._printSection in self._feedRateModifier:
 					line = re.sub('F([0-9]*)', lambda m: 'F' + str(int(int(m.group(1)) * self._feedRateModifier[self._printSection])), line)
 				if (matchesGcode(line, "G0") or matchesGcode(line, "G1")) and 'Z' in line:
