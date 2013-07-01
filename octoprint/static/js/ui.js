@@ -1336,6 +1336,7 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
     self.feature_waitForStart = ko.observable(undefined);
     self.feature_alwaysSendChecksum = ko.observable(undefined);
     self.feature_sdSupport = ko.observable(undefined);
+    self.feature_grbl = ko.observable(undefined);
 
     self.folder_uploads = ko.observable(undefined);
     self.folder_timelapse = ko.observable(undefined);
@@ -1387,6 +1388,7 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
         self.feature_waitForStart(response.feature.waitForStart);
         self.feature_alwaysSendChecksum(response.feature.alwaysSendChecksum);
         self.feature_sdSupport(response.feature.sdSupport);
+        self.feature_grbl(response.feature.grbl);
 
         self.folder_uploads(response.folder.uploads);
         self.folder_timelapse(response.folder.timelapse);
@@ -1427,7 +1429,8 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
                 "gcodeViewer": self.feature_gcodeViewer(),
                 "waitForStart": self.feature_waitForStart(),
                 "alwaysSendChecksum": self.feature_alwaysSendChecksum(),
-                "sdSupport": self.feature_sdSupport()
+                "sdSupport": self.feature_sdSupport(),
+                "grbl": self.feature_grbl()
             },
             "folder": {
                 "uploads": self.folder_uploads(),

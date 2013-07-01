@@ -92,6 +92,12 @@ class VirtualPrinter():
 		if self.readList is None:
 			return
 
+		# strip checksum
+		data = data.strip()
+		if "*" in data:
+			data = data[:data.rfind("*")]
+		data += "\n"
+
 		# shortcut for writing to SD
 		if self._writingToSd and not self._selectedSdFile is None and not "M29" in data:
 			with open(self._selectedSdFile, "a") as f:
@@ -377,10 +383,14 @@ class MachineCom(object):
 		self._printStartTime = None
 
 		self._alwaysSendChecksum = settings().getBoolean(["feature", "alwaysSendChecksum"])
+<<<<<<< HEAD
 		self._grbl = settings().getBoolean(["feature", "grbl"])
 		self._trimFloats = settings().getBoolean(["feature", "trimFloats"])
 		self._floatPrecision = settings().getInt(["feature", "floatPrecision"])
 		self._currentLine = 1
+=======
+		self._currentLine = 0
+>>>>>>> ce95577... Fixing #166 showed a deeper rooted issue with line number handling introduced with repetier/sdcard/gcodestreaming
 		self._resendDelta = None
 		self._lastLines = []
 
@@ -893,6 +903,7 @@ class MachineCom(object):
 		with self._sendingLock:
 			if self._serial is None:
 				return
+<<<<<<< HEAD
 			if matchesGcode(cmd, "M109") or matchesGcode(cmd, "M190"):
 				self._heatupWaitStartTime = time.time()
 			if matchesGcode(cmd, "M104") or matchesGcode(cmd, "M109"):
@@ -905,32 +916,52 @@ class MachineCom(object):
 					self._bedTargetTemp = float(re.search('S([0-9]+)', cmd).group(1))
 				except:
 					pass
+=======
 
-			if matchesGcode(cmd, "M110"):
-				newLineNumber = None
-				if " N" in cmd:
+			if not self.isStreaming():
+				for gcode in gcodeToEvent.keys():
+					if matchesGcode(cmd, gcode):
+						eventManager().fire(gcodeToEvent[gcode])
+>>>>>>> ce95577... Fixing #166 showed a deeper rooted issue with line number handling introduced with repetier/sdcard/gcodestreaming
+
+				if matchesGcode(cmd, "M109") or matchesGcode(cmd, "M190"):
+					self._heatupWaitStartTime = time.time()
+				if matchesGcode(cmd, "M104") or matchesGcode(cmd, "M109"):
 					try:
-						newLineNumber = int(re.search("N([0-9]+)", cmd).group(1))
+						self._targetTemp = float(re.search('S([0-9]+)', cmd).group(1))
 					except:
 						pass
-				else:
-					newLineNumber = 0
+				if matchesGcode(cmd, "M140") or matchesGcode(cmd, "M190"):
+					try:
+						self._bedTargetTemp = float(re.search('S([0-9]+)', cmd).group(1))
+					except:
+						pass
 
-				if settings().getBoolean(["feature", "resetLineNumbersWithPrefixedN"]) and newLineNumber is not None:
-					# let's rewrite the M110 command to fit repetier syntax
-					self._addToLastLines(cmd)
-					self._doSendWithChecksum("M110", newLineNumber)
-				else:
-					self._doSend(cmd, sendChecksum)
+				if matchesGcode(cmd, "M110"):
+					newLineNumber = None
+					if " N" in cmd:
+						try:
+							newLineNumber = int(re.search("N([0-9]+)", cmd).group(1))
+						except:
+							pass
+					else:
+						newLineNumber = 0
 
-				if newLineNumber is not None:
-					self._currentLine = newLineNumber + 1
+					if settings().getBoolean(["feature", "resetLineNumbersWithPrefixedN"]) and newLineNumber is not None:
+						# let's rewrite the M110 command to fit repetier syntax
+						self._addToLastLines(cmd)
+						self._doSendWithChecksum("M110", newLineNumber)
+					else:
+						self._doSend(cmd, sendChecksum)
 
-				# after a reset of the line number we have no way to determine what line exactly the printer now wants
-				self._lastLines = []
-				self._resendDelta = None
-			else:
-				self._doSend(cmd, sendChecksum)
+					if newLineNumber is not None:
+						self._currentLine = newLineNumber + 1
+
+					# after a reset of the line number we have no way to determine what line exactly the printer now wants
+					self._lastLines = []
+					self._resendDelta = None
+					return
+			self._doSend(cmd, sendChecksum)
 
 	def _addToLastLines(self, cmd):
 		self._lastLines.append(cmd)
@@ -940,10 +971,14 @@ class MachineCom(object):
 
 	def _doSend(self, cmd, sendChecksum=False):
 		if sendChecksum or self._alwaysSendChecksum:
+<<<<<<< HEAD
 			if self._alwaysSendChecksum:
 				lineNumber = self._currentLine
 			else:
 				lineNumber = self._gcodePos
+=======
+			lineNumber = self._currentLine
+>>>>>>> ce95577... Fixing #166 showed a deeper rooted issue with line number handling introduced with repetier/sdcard/gcodestreaming
 			self._addToLastLines(cmd)
 			self._currentLine += 1
 			if self._grbl:
@@ -988,8 +1023,24 @@ class MachineCom(object):
 
 	def _sendNext(self):
 		with self._sendNextLock:
+<<<<<<< HEAD
 			if self._gcodePos >= len(self._gcodeList):
 				self._changeState(self.STATE_OPERATIONAL)
+=======
+			line = self._currentFile.getNext()
+			if line is None:
+				if self.isStreaming():
+					self._sendCommand("M29")
+					filename = self._currentFile.getFilename()
+					self._currentFile = None
+					self._callback.mcFileTransferDone()
+					self._changeState(self.STATE_OPERATIONAL)
+					eventManager().fire("TransferDone", filename)
+				else:
+					self._callback.mcPrintjobDone()
+					self._changeState(self.STATE_OPERATIONAL)
+					eventManager().fire("PrintDone", self._currentFile.getFilename())
+>>>>>>> ce95577... Fixing #166 showed a deeper rooted issue with line number handling introduced with repetier/sdcard/gcodestreaming
 				return
 			if self._gcodePos == 100:
 				self._printStartTime100 = time.time()
@@ -1142,3 +1193,146 @@ class MachineCom(object):
 def getExceptionString():
 	locationInfo = traceback.extract_tb(sys.exc_info()[2])[0]
 	return "%s: '%s' @ %s:%s:%d" % (str(sys.exc_info()[0].__name__), str(sys.exc_info()[1]), os.path.basename(locationInfo[0]), locationInfo[2], locationInfo[1])
+<<<<<<< HEAD
+=======
+
+class PrintingFileInformation(object):
+	"""
+	Encapsulates information regarding the current file being printed: file name, current position, total size and
+	time the print started.
+	Allows to reset the current file position to 0 and to calculate the current progress as a floating point
+	value between 0 and 1.
+	"""
+
+	def __init__(self, filename):
+		self._filename = filename
+		self._filepos = 0
+		self._filesize = None
+		self._startTime = None
+
+	def getStartTime(self):
+		return self._startTime
+
+	def getFilename(self):
+		return self._filename
+
+	def getFilesize(self):
+		return self._filesize
+
+	def getFilepos(self):
+		return self._filepos
+
+	def getProgress(self):
+		"""
+		The current progress of the file, calculated as relation between file position and absolute size. Returns -1
+		if file size is None or < 1.
+		"""
+		if self._filesize is None or not self._filesize > 0:
+			return -1
+		return float(self._filepos) / float(self._filesize)
+
+	def reset(self):
+		"""
+		Resets the current file position to 0.
+		"""
+		self._filepos = 0
+
+	def start(self):
+		"""
+		Marks the print job as started and remembers the start time.
+		"""
+		self._startTime = time.time()
+
+class PrintingSdFileInformation(PrintingFileInformation):
+	"""
+	Encapsulates information regarding an ongoing print from SD.
+	"""
+
+	def __init__(self, filename, filesize):
+		PrintingFileInformation.__init__(self, filename)
+		self._filesize = filesize
+
+	def setFilepos(self, filepos):
+		"""
+		Sets the current file position.
+		"""
+		self._filepos = filepos
+
+class PrintingGcodeFileInformation(PrintingFileInformation):
+	"""
+	Encapsulates information regarding an ongoing direct print. Takes care of the needed file handle and ensures
+	that the file is closed in case of an error.
+	"""
+
+	def __init__(self, filename):
+		PrintingFileInformation.__init__(self, filename)
+		self._filehandle = None
+		self._lineCount = None
+		self._firstLine = None
+		self._prevLineType = None
+
+		if not os.path.exists(self._filename) or not os.path.isfile(self._filename):
+			raise IOError("File %s does not exist" % self._filename)
+		self._filesize = os.stat(self._filename).st_size
+
+	def start(self):
+		"""
+		Opens the file for reading and determines the file size. Start time won't be recorded until 100 lines in
+		"""
+		self._filehandle = open(self._filename, "r")
+		self._lineCount = None
+		self._prevLineType = "CUSTOM"
+
+	def getNext(self):
+		"""
+		Retrieves the next line for printing.
+		"""
+		if self._filehandle is None:
+			raise ValueError("File %s is not open for reading" % self._filename)
+
+		if self._lineCount is None:
+			self._lineCount = 0
+			return "M110 N0"
+
+		try:
+			processedLine = None
+			while processedLine is None:
+				if self._filehandle is None:
+					# file got closed just now
+					return None
+				line = self._filehandle.readline()
+				if not line:
+					self._filehandle.close()
+					self._filehandle = None
+				processedLine = self._processLine(line)
+			self._lineCount += 1
+			self._filepos = self._filehandle.tell()
+
+			if self._lineCount >= 100 and self._startTime is None:
+				self._startTime = time.time()
+
+			return processedLine
+		except Exception as (e):
+			if self._filehandle is not None:
+				self._filehandle.close()
+				self._filehandle = None
+			raise e
+
+	def _processLine(self, line):
+		lineType = self._prevLineType
+		if line.startswith(";TYPE:"):
+			lineType = line[6:].strip()
+		if ";" in line:
+			line = line[0:line.find(";")]
+		line = line.strip()
+		if len(line) > 0:
+			if self._prevLineType != lineType:
+				return line, lineType
+			else:
+				return line
+		else:
+			return None
+
+class StreamingGcodeFileInformation(PrintingGcodeFileInformation):
+	pass
+>>>>>>> ce95577... Fixing #166 showed a deeper rooted issue with line number handling introduced with repetier/sdcard/gcodestreaming
