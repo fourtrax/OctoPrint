@@ -81,6 +81,7 @@ class VirtualPrinter():
 		self._selectedSdFilePos = None
 		self._writingToSd = False
 		self._newSdFilePos = None
+		self._grbl = False
 
 		self.currentLine = 0
 
@@ -377,6 +378,8 @@ class MachineCom(object):
 
 		self._alwaysSendChecksum = settings().getBoolean(["feature", "alwaysSendChecksum"])
 		self._grbl = settings().getBoolean(["feature", "grbl"])
+		self._trimFloats = settings().getBoolean(["feature", "trimFloats"])
+		self._floatPrecision = settings().getInt(["feature", "floatPrecision"])
 		self._currentLine = 1
 		self._resendDelta = None
 		self._lastLines = []
@@ -574,7 +577,10 @@ class MachineCom(object):
 			self._changeState(self.STATE_CONNECTING)
 
 		#Start monitoring the serial port.
-		timeout = time.time() + 5
+		if self._grbl:
+			timeout = time.time() + 10 
+		else:
+			timeout = time.time() + 5
 		tempRequestTimeout = timeout
 		sdStatusRequestTimeout = timeout
 		startSeen = not settings().getBoolean(["feature", "waitForStartOnConnect"])
@@ -666,7 +672,7 @@ class MachineCom(object):
 				self._callback.mcSdPrintingDone()
 
 			##~~ Message handling
-			elif line.strip() != '' and line.strip() != 'ok' and not line.startswith("wait") and not line.startswith('Resend:') and line != 'echo:Unknown command:""\n' and self.isOperational():
+			elif line.strip() != '' and line.strip() != 'ok' and not line.startswith("wait") and not line.startswith('Resend:') and line != 'echo:Unknown command:""\n' and line != "Unsupported statement" and self.isOperational():
 				self._callback.mcMessage(line)
 
 			### Baudrate detection
@@ -693,7 +699,10 @@ class MachineCom(object):
 							self._log("Trying baudrate: %d" % (baudrate))
 							self._baudrateDetectRetry = 5
 							self._baudrateDetectTestOk = 0
-							timeout = time.time() + 5
+							if self._grbl:
+								timeout = time.time() + 10
+							else:
+								timeout = time.time() + 5
 							self._serial.write('\n')
 							if self._grbl:
 								self._sendComamnd("$")
@@ -724,8 +733,7 @@ class MachineCom(object):
 						self._changeState(self.STATE_OPERATIONAL)
 				else:
 					if (line == "" or "wait" in line) and startSeen:
-						if not self._grbl:
-							self._sendCommand("M105")
+						self._sendCommand("M105")
 					elif "start" in line:
 						startSeen = True
 					elif "ok" in line and startSeen:
@@ -744,7 +752,10 @@ class MachineCom(object):
 					else:
 						if not self._grbl:
 							self._sendCommand("M105")
-					tempRequestTimeout = time.time() + 5
+					if self._grbl:
+						tempRequestTimeout = time.time() + 10 
+					else:
+						tempRequestTimeout = time.time() + 5
 				# resend -> start resend procedure from requested line
 				elif "resend" in line.lower() or "rs" in line:
 					self._handleResendRequest(line)
@@ -759,23 +770,35 @@ class MachineCom(object):
 					if time.time() > tempRequestTimeout:
 						if not self._grbl:
 							self._sendCommand("M105")
-						tempRequestTimeout = time.time() + 5
+						if self._grbl:
+							tempRequestTimeout = time.time() + 10
+						else:
+							tempRequestTimeout = time.time() + 5
 
 					if time.time() > sdStatusRequestTimeout:
 						self._sendCommand("M27")
 						sdStatusRequestTimeout = time.time() + 1
 
 					if 'ok' or 'SD printing byte' in line:
-						timeout = time.time() + 5
+						if self._grbl:
+							timeout = time.time() + 10
+						else:
+							timeout = time.time() + 5
 				else:
 					# Even when printing request the temperature every 5 seconds.
 					if time.time() > tempRequestTimeout:
 						if not self._grbl:
 							self._commandQueue.put("M105")
-						tempRequestTimeout = time.time() + 5
+						if self._grbl:
+							tempRequestTimeout = time.time() + 10
+						else:
+							tempRequestTimeout = time.time() + 5
 
 					if 'ok' in line:
-						timeout = time.time() + 5
+						if self._grbl:
+							timeout = time.time() + 10
+						else:
+							timeout = time.time() + 5
 						if self._resendDelta is not None:
 							self._resendNextCommand()
 						elif not self._commandQueue.empty():
@@ -954,6 +977,15 @@ class MachineCom(object):
 			self._errorValue = getExceptionString()
 			self.close(True)
 
+	def roundAllFloats(line, precision):
+		for token in line.split():
+			m = re.search(r"\b([A-Z])(-?\d+\.\d{3,})\b", token)
+			if m:
+				rounded = round(float(m.group(2)), precision)
+				newtoken="%s%s" % (m.group(1),rounded)
+				line = re.sub(token, newtoken, line)
+		return(line)
+
 	def _sendNext(self):
 		with self._sendNextLock:
 			if self._gcodePos >= len(self._gcodeList):
@@ -966,6 +998,8 @@ class MachineCom(object):
 				self._printSection = line[1]
 				line = line[0]
 			try:
+				if self._trimFloats:
+					line = self.roundAllFloats(line.str(),self._floatPrecision)
 				if matchesGcode(line, "M0") or matchesGcode(line, "M1"):
 					self.setPause(True)
 					if not self._grbl:
@@ -973,12 +1007,15 @@ class MachineCom(object):
 				if self._printSection in self._feedRateModifier:
 					line = re.sub('F([0-9]*)', lambda m: 'F' + str(int(int(m.group(1)) * self._feedRateModifier[self._printSection])), line)
 				if (matchesGcode(line, "G0") or matchesGcode(line, "G1")) and 'Z' in line:
-					z = float(re.search('Z([0-9\.]*)', line).group(1))
+					if self._grbl:
+						z = float(re.search('Z(-?[0-9\.]*)', line).group(1))
+					else:
+						z = float(re.search('Z([0-9\.]*)', line).group(1))
 					if self._currentZ != z:
 						self._currentZ = z
 						self._callback.mcZChange(z)
 			except:
-				self._log("Unexpected error: %s" % (getExceptionString()))
+				self._log("Unexpected error: %s" % getExceptionString())
 			self._sendCommand(line, True)
 			self._gcodePos += 1
 			self._callback.mcProgress()

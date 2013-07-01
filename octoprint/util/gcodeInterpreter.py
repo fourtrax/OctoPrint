@@ -185,6 +185,8 @@ class gcode(object):
 					P = self.getCodeFloat(line, 'P')
 					if P is not None:
 						totalMoveTimeMinute += P / 60 / 1000
+				elif G == 17:  #XY Plane selection
+					pass
 				elif G == 20:	#Units are inches
 					scale = 25.4
 				elif G == 21:	#Units are mm
@@ -229,6 +231,16 @@ class gcode(object):
 				M = self.getCodeInt(line, 'M')
 				if M is not None:
 					if M == 1:	#Message with possible wait (ignored)
+						pass
+					elif M == 3:  # Start spindle clockwise
+						pass
+					elif M == 4:  # Start spindle counterclockwise
+						pass
+					elif M == 5:  # Stop the spindle
+						pass
+					elif M == 6:  #Execute tool change
+						pass
+					elif M == 30:  #End program
 						pass
 					elif M == 80:	#Enable power supply
 						pass

@@ -44,7 +44,9 @@ default_settings = {
 		"alwaysSendChecksum": False,
 		"resetLineNumbersWithPrefixedN": False,
 		"sdSupport": False,
-		"grbl": True
+		"grbl": True,
+		"trimFloats": True,
+		"floatPrecision": 3
 	},
 	"folder": {
 		"uploads": None,
