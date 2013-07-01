@@ -216,20 +216,23 @@ function PrinterStateViewModel(loginStateViewModel) {
     self.isSdReady = ko.observable(undefined);
 
     self.filename = ko.observable(undefined);
-    self.filament = ko.observable(undefined);
-    self.estimatedPrintTime = ko.observable(undefined);
+    self.progress = ko.observable(undefined);
+    self.filesize = ko.observable(undefined);
+    self.filepos = ko.observable(undefined);
     self.printTime = ko.observable(undefined);
     self.printTimeLeft = ko.observable(undefined);
-    self.progress = ko.observable(undefined);
-    self.currentLine = ko.observable(undefined);
-    self.totalLines = ko.observable(undefined);
+    self.sd = ko.observable(undefined);
+
+    self.filament = ko.observable(undefined);
+    self.estimatedPrintTime = ko.observable(undefined);
+
     self.currentHeight = ko.observable(undefined);
 
-    self.lineString = ko.computed(function() {
-        if (!self.totalLines())
+    self.byteString = ko.computed(function() {
+        if (!self.filesize())
             return "-";
-        var currentLine = self.currentLine() ? self.currentLine() : "-";
-        return currentLine + " / " + self.totalLines();
+        var filepos = self.filepos() ? self.filepos() : "-";
+        return filepos + " / " + self.filesize();
     });
     self.heightString = ko.computed(function() {
         if (!self.currentHeight())
@@ -259,8 +262,6 @@ function PrinterStateViewModel(loginStateViewModel) {
     self._fromData = function(data) {
         self._processStateData(data.state)
         self._processJobData(data.job);
-        self._processGcodeData(data.gcode);
-        self._processSdUploadData(data.sdUpload);
         self._processProgressData(data.progress);
         self._processZData(data.currentZ);
     }
@@ -273,33 +274,15 @@ function PrinterStateViewModel(loginStateViewModel) {
         self.isPrinting(data.flags.printing);
         self.isError(data.flags.error);
         self.isReady(data.flags.ready);
-        self.isLoading(data.flags.loading);
         self.isSdReady(data.flags.sdReady);
     }
 
     self._processJobData = function(data) {
         self.filename(data.filename);
-        self.totalLines(data.lines);
+        self.filesize(data.filesize);
         self.estimatedPrintTime(data.estimatedPrintTime);
         self.filament(data.filament);
-    }
-
-    self._processGcodeData = function(data) {
-        if (self.isLoading()) {
-            var progress = Math.round(data.progress * 100);
-            if (data.mode == "loading") {
-                self.filename("Loading... (" + progress + "%)");
-            } else if (data.mode == "parsing") {
-                self.filename("Parsing... (" + progress + "%)");
-            }
-        }
-    }
-
-    self._processSdUploadData = function(data) {
-        if (self.isLoading()) {
-            var progress = Math.round(data.progress * 100);
-            self.filename("Streaming... (" + progress + "%)");
-        }
+        self.sd(data.sd);
     }
 
     self._processProgressData = function(data) {
@@ -308,7 +291,7 @@ function PrinterStateViewModel(loginStateViewModel) {
         } else {
             self.progress(undefined);
         }
-        self.currentLine(data.currentLine);
+        self.filepos(data.filepos);
         self.printTime(data.printTime);
         self.printTimeLeft(data.printTimeLeft);
     }
@@ -526,10 +509,11 @@ function TemperatureViewModel(loginStateViewModel, settingsViewModel) {
     }
 }
 
-function ControlViewModel(loginStateViewModel) {
+function ControlViewModel(loginStateViewModel, settingsViewModel) {
     var self = this;
 
     self.loginState = loginStateViewModel;
+    self.settings = settingsViewModel;
 
     self.isErrorOrClosed = ko.observable(undefined);
     self.isOperational = ko.observable(undefined);
@@ -541,6 +525,8 @@ function ControlViewModel(loginStateViewModel) {
 
     self.extrusionAmount = ko.observable(undefined);
     self.controls = ko.observableArray([]);
+
+    self.feedbackControlLookup = {};
 
     self.fromCurrentData = function(data) {
         self._processStateData(data.state);
@@ -560,6 +546,12 @@ function ControlViewModel(loginStateViewModel) {
         self.isLoading(data.flags.loading);
     }
 
+    self.fromFeedbackCommandData = function(data) {
+        if (data.name in self.feedbackControlLookup) {
+            self.feedbackControlLookup[data.name](data.output);
+        }
+    }
+
     self.requestData = function() {
         $.ajax({
             url: AJAX_BASEURL + "control/custom",
@@ -572,23 +564,26 @@ function ControlViewModel(loginStateViewModel) {
     }
 
     self._fromResponse = function(response) {
-        self.controls(self._enhanceControls(response.controls));
+        self.controls(self._processControls(response.controls));
     }
 
-    self._enhanceControls = function(controls) {
+    self._processControls = function(controls) {
         for (var i = 0; i < controls.length; i++) {
-            controls[i] = self._enhanceControl(controls[i]);
+            controls[i] = self._processControl(controls[i]);
         }
         return controls;
     }
 
-    self._enhanceControl = function(control) {
+    self._processControl = function(control) {
         if (control.type == "parametric_command" || control.type == "parametric_commands") {
             for (var i = 0; i < control.input.length; i++) {
                 control.input[i].value = control.input[i].default;
             }
+        } else if (control.type == "feedback_command") {
+            control.output = ko.observable("");
+            self.feedbackControlLookup[control.name] = control.output;
         } else if (control.type == "section") {
-            control.children = self._enhanceControls(control.children);
+            control.children = self._processControls(control.children);
         }
         return control;
     }
@@ -638,7 +633,7 @@ function ControlViewModel(loginStateViewModel) {
             return;
 
         var data = undefined;
-        if (command.type == "command" || command.type == "parametric_command") {
+        if (command.type == "command" || command.type == "parametric_command" || command.type == "feedback_command") {
             // single command
             data = {"command" : command.command};
         } else if (command.type == "commands" || command.type == "parametric_commands") {
@@ -676,6 +671,8 @@ function ControlViewModel(loginStateViewModel) {
             case "parametric_command":
             case "parametric_commands":
                 return "customControls_parametricCommandTemplate";
+            case "feedback_command":
+                return "customControls_feedbackCommandTemplate";
             default:
                 return "customControls_emptyTemplate";
         }
@@ -1313,6 +1310,9 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
     self.loginState = loginStateViewModel;
     self.users = usersViewModel;
 
+    self.api_enabled = ko.observable(undefined);
+    self.api_key = ko.observable(undefined);
+
     self.appearance_name = ko.observable(undefined);
     self.appearance_color = ko.observable(undefined);
 
@@ -1329,11 +1329,12 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
     self.webcam_ffmpegPath = ko.observable(undefined);
     self.webcam_bitrate = ko.observable(undefined);
     self.webcam_watermark = ko.observable(undefined);
+    self.webcam_flipH = ko.observable(undefined);
+    self.webcam_flipV = ko.observable(undefined);
 
     self.feature_gcodeViewer = ko.observable(undefined);
     self.feature_waitForStart = ko.observable(undefined);
     self.feature_alwaysSendChecksum = ko.observable(undefined);
-    self.feature_resetLineNumbersWithPrefixedN = ko.observable(undefined);
     self.feature_sdSupport = ko.observable(undefined);
 
     self.folder_uploads = ko.observable(undefined);
@@ -1363,6 +1364,9 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
     }
 
     self.fromResponse = function(response) {
+        self.api_enabled(response.api.enabled);
+        self.api_key(response.api.key);
+
         self.appearance_name(response.appearance.name);
         self.appearance_color(response.appearance.color);
 
@@ -1376,11 +1380,12 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
         self.webcam_ffmpegPath(response.webcam.ffmpegPath);
         self.webcam_bitrate(response.webcam.bitrate);
         self.webcam_watermark(response.webcam.watermark);
+        self.webcam_flipH(response.webcam.flipH);
+        self.webcam_flipV(response.webcam.flipV);
 
         self.feature_gcodeViewer(response.feature.gcodeViewer);
         self.feature_waitForStart(response.feature.waitForStart);
         self.feature_alwaysSendChecksum(response.feature.alwaysSendChecksum);
-        self.feature_resetLineNumbersWithPrefixedN(response.feature.resetLineNumbersWithPrefixedN);
         self.feature_sdSupport(response.feature.sdSupport);
 
         self.folder_uploads(response.folder.uploads);
@@ -1395,6 +1400,10 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
 
     self.saveData = function() {
         var data = {
+            "api" : {
+                "enabled": self.api_enabled(),
+                "key": self.api_key()
+             },
             "appearance" : {
                 "name": self.appearance_name(),
                 "color": self.appearance_color()
@@ -1410,14 +1419,14 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
                 "snapshotUrl": self.webcam_snapshotUrl(),
                 "ffmpegPath": self.webcam_ffmpegPath(),
                 "bitrate": self.webcam_bitrate(),
-                "watermark": self.webcam_watermark()
+                "watermark": self.webcam_watermark(),
+                "flipH": self.webcam_flipH(),
+                "flipV": self.webcam_flipV()
             },
             "feature": {
                 "gcodeViewer": self.feature_gcodeViewer(),
                 "waitForStart": self.feature_waitForStart(),
                 "alwaysSendChecksum": self.feature_alwaysSendChecksum(),
-                "resetLineNumbersWithPrefixedN": self.feature_resetLineNumbersWithPrefixedN(),
-                "waitForStart": self.feature_waitForStart(),
                 "sdSupport": self.feature_sdSupport()
             },
             "folder": {
@@ -1504,7 +1513,7 @@ function DataUpdater(loginStateViewModel, connectionViewModel, printerStateViewM
             self.loginStateViewModel.requestData();
             self.gcodeFilesViewModel.requestData();
         }
-    })
+    });
     self._socket.on("disconnect", function() {
         $("#offline_overlay_message").html(
             "The server appears to be offline, at least I'm not getting any response from it. I'll try to reconnect " +
@@ -1513,13 +1522,13 @@ function DataUpdater(loginStateViewModel, connectionViewModel, printerStateViewM
         );
         if (!$("#offline_overlay").is(":visible"))
             $("#offline_overlay").show();
-    })
+    });
     self._socket.on("reconnect_failed", function() {
         $("#offline_overlay_message").html(
             "The server appears to be offline, at least I'm not getting any response from it. I <strong>could not reconnect automatically</strong>, " +
             "but you may try a manual reconnect using the button below."
         );
-    })
+    });
     self._socket.on("history", function(data) {
         self.connectionViewModel.fromHistoryData(data);
         self.printerStateViewModel.fromHistoryData(data);
@@ -1529,7 +1538,7 @@ function DataUpdater(loginStateViewModel, connectionViewModel, printerStateViewM
         self.timelapseViewModel.fromHistoryData(data);
         self.gcodeViewModel.fromHistoryData(data);
         self.gcodeFilesViewModel.fromCurrentData(data);
-    })
+    });
     self._socket.on("current", function(data) {
         self.connectionViewModel.fromCurrentData(data);
         self.printerStateViewModel.fromCurrentData(data);
@@ -1539,12 +1548,17 @@ function DataUpdater(loginStateViewModel, connectionViewModel, printerStateViewM
         self.timelapseViewModel.fromCurrentData(data);
         self.gcodeViewModel.fromCurrentData(data);
         self.gcodeFilesViewModel.fromCurrentData(data);
-    })
+    });
     self._socket.on("updateTrigger", function(type) {
         if (type == "gcodeFiles") {
             gcodeFilesViewModel.requestData();
+        } else if (type == "timelapseFiles") {
+            timelapseViewModel.requestData();
         }
-    })
+    });
+    self._socket.on("feedbackCommandOutput", function(data) {
+        self.controlViewModel.fromFeedbackCommandData(data);
+    });
 
     self.reconnect = function() {
         self._socket.socket.connect();
@@ -1754,33 +1768,33 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
 
     self._saveCurrentSortingToLocalStorage = function() {
         if ( self._initializeLocalStorage() ) {
-	        var currentSorting = self.currentSorting();
-	        if (currentSorting !== undefined)
-	            localStorage[self.listType + "." + "currentSorting"] = currentSorting;
-	        else
-	            localStorage[self.listType + "." + "currentSorting"] = undefined;
+            var currentSorting = self.currentSorting();
+            if (currentSorting !== undefined)
+                localStorage[self.listType + "." + "currentSorting"] = currentSorting;
+            else
+                localStorage[self.listType + "." + "currentSorting"] = undefined;
         }
     }
 
     self._loadCurrentSortingFromLocalStorage = function() {
         if ( self._initializeLocalStorage() ) {
-	        if (_.contains(_.keys(supportedSorting), localStorage[self.listType + "." + "currentSorting"]))
-	            self.currentSorting(localStorage[self.listType + "." + "currentSorting"]);
-	        else
-	            self.currentSorting(defaultSorting);
-	    }
+            if (_.contains(_.keys(supportedSorting), localStorage[self.listType + "." + "currentSorting"]))
+                self.currentSorting(localStorage[self.listType + "." + "currentSorting"]);
+            else
+                self.currentSorting(defaultSorting);
+        }
     }
 
     self._saveCurrentFiltersToLocalStorage = function() {
         if ( self._initializeLocalStorage() ) {
-	        var filters = _.intersection(_.keys(self.supportedFilters), self.currentFilters());
-	        localStorage[self.listType + "." + "currentFilters"] = JSON.stringify(filters);
-	    }
+            var filters = _.intersection(_.keys(self.supportedFilters), self.currentFilters());
+            localStorage[self.listType + "." + "currentFilters"] = JSON.stringify(filters);
+        }
     }
 
     self._loadCurrentFiltersFromLocalStorage = function() {
         if ( self._initializeLocalStorage() ) {
-        	self.currentFilters(_.intersection(_.keys(self.supportedFilters), JSON.parse(localStorage[self.listType + "." + "currentFilters"])));
+            self.currentFilters(_.intersection(_.keys(self.supportedFilters), JSON.parse(localStorage[self.listType + "." + "currentFilters"])));
         }
     }
 
@@ -1832,7 +1846,7 @@ $(function() {
         var settingsViewModel = new SettingsViewModel(loginStateViewModel, usersViewModel);
         var appearanceViewModel = new AppearanceViewModel(settingsViewModel);
         var temperatureViewModel = new TemperatureViewModel(loginStateViewModel, settingsViewModel);
-        var controlViewModel = new ControlViewModel(loginStateViewModel);
+        var controlViewModel = new ControlViewModel(loginStateViewModel, settingsViewModel);
         var terminalViewModel = new TerminalViewModel(loginStateViewModel);
         var gcodeFilesViewModel = new GcodeFilesViewModel(loginStateViewModel);
         var timelapseViewModel = new TimelapseViewModel(loginStateViewModel);

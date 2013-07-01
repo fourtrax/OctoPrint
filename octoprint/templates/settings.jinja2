@@ -13,6 +13,7 @@
                 <li><a href="#settings_temperature" data-toggle="tab">Temperature</a></li>
                 <li><a href="#settings_appearance" data-toggle="tab">Appearance</a></li>
                 {% if enableAccessControl %}<li><a href="#settings_users" data-toggle="tab">Users</a></li>{% endif %}
+                <li><a href="#settings_api" data-toggle="tab">Api</a></li>
             </ul>
 
             <div class="tab-content span8">
@@ -89,6 +90,18 @@
                                 </label>
                             </div>
                         </div>
+                        <div class="control-group">
+                            <div class="controls">
+                                <label class="checkbox">
+                                    <input type="checkbox" data-bind="checked: webcam_flipH" id="settings-webcamFlipH"> Flip webcam horizontally
+                                </label>
+                            </div>
+                            <div class="controls">
+                                <label class="checkbox">
+                                    <input type="checkbox" data-bind="checked: webcam_flipV" id="settings-webcamFlipV"> Flip webcam vertically
+                                </label>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="tab-pane" id="settings_features">
@@ -118,13 +131,6 @@
                             <div class="controls">
                                 <label class="checkbox">
                                     <input type="checkbox" data-bind="checked: feature_alwaysSendChecksum" id="settings-featureAlwaysSendChecksum"> Send a checksum with <strong>every</strong> command  <span class="label">Repetier</span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="control-group">
-                            <div class="controls">
-                                <label class="checkbox">
-                                    <input type="checkbox" data-bind="checked: feature_resetLineNumbersWithPrefixedN" id="settings-resetLineNumbersWithPrefixedN"> Send M110 commands with target line number as N-prefix  <span class="label">Repetier</span>
                                 </label>
                             </div>
                         </div>
@@ -202,6 +208,23 @@
                             <div class="controls">
                                 <select id="settings-appearanceColor" data-bind="value: appearance_color, options: appearance_available_colors">
                                 </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="tab-pane" id="settings_api">
+                    <form class="form-horizontal">
+                        <div class="control-group">
+                            <div class="controls">
+                                <label class="checkbox">
+                                    <input type="checkbox" id="settings-apiEnabled" data-bind="checked: api_enabled"> Enable
+                                </label>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label" for="settings-apiKey">Apikey</label>
+                            <div class="controls">
+                                <input type="text" class="input-block-level" data-bind="value: api_key" id="settings-apikey">
                             </div>
                         </div>
                     </form>
