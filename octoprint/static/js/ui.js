@@ -1337,6 +1337,8 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
     self.feature_alwaysSendChecksum = ko.observable(undefined);
     self.feature_sdSupport = ko.observable(undefined);
     self.feature_grbl = ko.observable(undefined);
+    self.feature_trimFloats = ko.observable(undefined);
+    self.feature_floatPrecision = ko.observable(undefined);
 
     self.folder_uploads = ko.observable(undefined);
     self.folder_timelapse = ko.observable(undefined);
@@ -1344,6 +1346,7 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
     self.folder_logs = ko.observable(undefined);
 
     self.temperature_profiles = ko.observableArray(undefined);
+
 
     self.system_actions = ko.observableArray([]);
 
@@ -1389,6 +1392,8 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
         self.feature_alwaysSendChecksum(response.feature.alwaysSendChecksum);
         self.feature_sdSupport(response.feature.sdSupport);
         self.feature_grbl(response.feature.grbl);
+        self.feature_trimFloats(response.feature.trimFloats);
+        self.feature_floatPrecision(response.feature.floatPrecision);
 
         self.folder_uploads(response.folder.uploads);
         self.folder_timelapse(response.folder.timelapse);
@@ -1396,6 +1401,7 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
         self.folder_logs(response.folder.logs);
 
         self.temperature_profiles(response.temperature.profiles);
+
 
         self.system_actions(response.system.actions);
     }
@@ -1430,7 +1436,9 @@ function SettingsViewModel(loginStateViewModel, usersViewModel) {
                 "waitForStart": self.feature_waitForStart(),
                 "alwaysSendChecksum": self.feature_alwaysSendChecksum(),
                 "sdSupport": self.feature_sdSupport(),
-                "grbl": self.feature_grbl()
+                "grbl": self.feature_grbl(),
+                "trimFloats": self.feature_trimFloats(),
+                "floatPrecision": self.feature_floatPrecision()
             },
             "folder": {
                 "uploads": self.folder_uploads(),

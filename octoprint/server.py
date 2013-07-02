@@ -147,7 +147,8 @@ def index():
 		enableAccessControl=userManager is not None,
 		enableSdSupport=settings().get(["feature", "sdSupport"]),
 		gitBranch=branch,
-		gitCommit=commit
+		gitCommit=commit,
+		grblEnabled=settings().get(["feature", "grbl"]),
 	)
 
 #~~ Printer control
@@ -506,7 +507,9 @@ def getSettings():
 			"waitForStart": s.getBoolean(["feature", "waitForStartOnConnect"]),
 			"alwaysSendChecksum": s.getBoolean(["feature", "alwaysSendChecksum"]),
 			"sdSupport": s.getBoolean(["feature", "sdSupport"]),
-			"grbl": s.getBoolean(["feature", "grbl"])
+			"grbl": s.getBoolean(["feature", "grbl"]),
+			"trimFloats": s.getBoolean(["feature", "trimFloats"]),
+			"floatPrecision": s.getInt(["feature", "floatPrecision"])
 		},
 		"folder": {
 			"uploads": s.getBaseFolder("uploads"),
@@ -560,6 +563,8 @@ def setSettings():
 			if "alwaysSendChecksum" in data["feature"].keys(): s.setBoolean(["feature", "alwaysSendChecksum"], data["feature"]["alwaysSendChecksum"])
 			if "sdSupport" in data["feature"].keys(): s.setBoolean(["feature", "sdSupport"], data["feature"]["sdSupport"])
 			if "grbl" in data["feature"].keys(): s.setBoolean(["feature", "grbl"], data["feature"]["grbl"])
+			if "trimFloats" in data["feature"].keys(): s.setBoolean(["feature", "trimFloats"], data["feature"]["trimFloats"])
+			if "floatPrecision" in data["feature"].keys(): s.setInt(["feature", "floatPrecision"], data["feature"]["floatPrecision"])
 
 		if "folder" in data.keys():
 			if "uploads" in data["folder"].keys(): s.setBaseFolder("uploads", data["folder"]["uploads"])

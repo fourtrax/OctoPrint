@@ -41,8 +41,8 @@ default_settings = {
 		"flipV": False
 	},
 	"feature": {
-		"gCodeVisualizer": False,
-		"waitForStartOnConnect": False,
+		"gCodeVisualizer": True,
+		"waitForStartOnConnect": True,
 		"alwaysSendChecksum": False,
 		"sdSupport": True,
 		"grbl": True,

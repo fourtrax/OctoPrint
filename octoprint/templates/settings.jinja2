@@ -11,6 +11,7 @@
                 <li><a href="#settings_features" data-toggle="tab">Features</a></li>
                 <li><a href="#settings_folder" data-toggle="tab">Folder</a></li>
                 <li><a href="#settings_temperature" data-toggle="tab">Temperature</a></li>
+                <li><a href="#settings_grbltab" data-toggle="tab">Grbl</a></li>
                 <li><a href="#settings_appearance" data-toggle="tab">Appearance</a></li>
                 {% if enableAccessControl %}<li><a href="#settings_users" data-toggle="tab">Users</a></li>{% endif %}
                 <li><a href="#settings_api" data-toggle="tab">Api</a></li>
@@ -130,13 +131,6 @@
                         <div class="control-group">
                             <div class="controls">
                                 <label class="checkbox">
-                                    <input type="checkbox" data-bind="checked: feature_grbl" id="settings-featureGrbl"> Grbl firmware (CNC machines)
-                                </label>
-                            </div>
-                        </div>
-                        <div class="control-group">
-                            <div class="controls">
-                                <label class="checkbox">
                                     <input type="checkbox" data-bind="checked: feature_alwaysSendChecksum" id="settings-featureAlwaysSendChecksum"> Send a checksum with <strong>every</strong> command  <span class="label">Repetier</span>
                                 </label>
                             </div>
@@ -171,6 +165,34 @@
                         </div>
                     </form>
                 </div>
+				
+				<div class="tab-pane" id="settings_grbltab">
+					<form class="form-horizontal">
+                        <div class="control-group">
+                            <div class="controls">
+                                <label class="checkbox">
+                                    <input type="checkbox" data-bind="checked: feature_grbl" id="settings-grbl"> Enable Grbl (CNC machines)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <div class="controls">
+                                <label class="checkbox">
+                                    <input type="checkbox" data-bind="checked: feature_trimFloats" id="settings-trimFloats"> Round floating point values
+                                </label>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label" for="grbl_floatPrecision">Float Precision</label>
+                            <div class="controls">
+                                <div class="input-append">
+                                    <input type="number" class="input-mini text-right" data-bind="value: feature_floatPrecision" id="settings-floatPrecision">
+                                    <span class="add-on">decimal places</span>
+                                </div>
+							</div>
+						</div>
+					</form>
+				</div>
                 <div class="tab-pane" id="settings_temperature">
                     <form class="form-horizontal">
                         <div class="row-fluid">

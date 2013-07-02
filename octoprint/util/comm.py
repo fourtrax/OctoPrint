@@ -1083,7 +1083,7 @@ class MachineCom(object):
 							self._currentZ = z
 							self._callback.mcZChange(z)
 				except:
-					self._log("Unexpected error: %s" % getExceptionString())
+					self._log("Unexpected error: %s with line: %s" % (getExceptionString(), line))
 			self._sendCommand(line, True)
 			self._callback.mcProgress()
 	
