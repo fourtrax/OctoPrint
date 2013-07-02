@@ -56,7 +56,6 @@ class Printer():
 
 		self._currentZ = None
 
-		self.peakZ = -1
 		self._progress = None
 		self._printTime = None
 		self._printTimeLeft = None
@@ -394,12 +393,11 @@ class Printer():
 		 Callback method for the comm object, called upon change of the z-layer.
 		"""
 		oldZ = self._currentZ
-		# only do this if we hit a new Z peak level.  Some slicers do a Z-lift when retracting / moving without printing 
-		# and some do anti-backlash up-then-down movement when advancing layers
-		if newZ > self.peakZ:
-			self.peakZ = newZ
+		if newZ != oldZ:
+			# we have to react to all z-changes, even those that might "go backward" due to a slicer's retraction or
+			# anti-backlash-routines. Event subscribes should individually take care to filter out "wrong" z-changes
 			eventManager().fire("ZChange", newZ)
-			
+
 		self._setCurrentZ(newZ)
 
 	def mcSdStateChange(self, sdReady):
@@ -615,7 +613,6 @@ class StateMonitor(object):
 		self._gcodeData = None
 		self._sdUploadData = None
 		self._currentZ = None
-		self._peakZ = -1
 		self._progress = None
 
 		self._changeEvent = threading.Event()
