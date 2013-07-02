@@ -44,7 +44,6 @@ def getClass(name):
 	return m
 
 def matchesGcode(line, gcode):
-<<<<<<< HEAD
 	return re.search("^%s(\D|$)" % gcode.strip(), line, re.I)
 
 def getGitInfo():
@@ -65,6 +64,3 @@ def getGitInfo():
 		head = f.readline().strip()
 
 	return (branch, head)
-=======
-	return re.search("^%s(\D|$)" % gcode.strip(), line, re.I)
->>>>>>> ce95577... Fixing #166 showed a deeper rooted issue with line number handling introduced with repetier/sdcard/gcodestreaming
