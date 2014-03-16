@@ -323,6 +323,9 @@ class MachineComPrintCallback(object):
 	
 	def mcTempUpdate(self, temp, bedTemp, targetTemp, bedTargetTemp):
 		pass
+
+	def mcPosUpdate(self, MPos, WPos):
+		pass
 	
 	def mcStateChange(self, state):
 		pass
@@ -606,6 +609,10 @@ class MachineCom(object):
 
 		#Start monitoring the serial port.
 		timeout = time.time() + timeoutAllowance
+
+		grblMoving = True
+		grblLastStatus = ""
+
 		tempRequestTimeout = timeout
 		sdStatusRequestTimeout = timeout
 		startSeen = not settings().getBoolean(["feature", "waitForStartOnConnect"])
@@ -644,6 +651,29 @@ class MachineCom(object):
 				if self._sdFileList and not 'End file list' in line:
 					self._sdFiles.append(line.strip().lower())
 					continue
+
+
+				# GRBL Position update
+				if self._grbl and 'MPos:' in line:
+
+					if grblLastStatus == line:
+						grblMoving = False
+					else:
+						grblMoving = True
+
+					grblLastStatus = line
+
+					parts = line.strip("\r\n").split(":")
+
+					pos = parts[1].split(",")
+					MPos = (float(pos[0]), float(pos[1]), float(pos[2]))
+
+					pos = parts[2].split(",")
+					WPos = (float(pos[0]), float(pos[1]), float( pos[2].strip(">") ))
+
+					self._callback.mcPosUpdate(MPos, WPos)
+
+
 
 				##~~ Temperature processing
 				if ' T:' in line or line.startswith('T:'):
@@ -809,6 +839,11 @@ class MachineCom(object):
 						else:
 							if not self._grbl:
 								self._sendCommand("M105")
+
+
+							if self._grbl and grblMoving:								
+								self._sendCommand("?")
+						
 						tempRequestTimeout = time.time() + timeoutAllowance
 
 					# resend -> start resend procedure from requested line
@@ -841,7 +876,7 @@ class MachineCom(object):
 						# Even when printing request the temperature every 5 seconds.
 						if time.time() > tempRequestTimeout and not self.isStreaming():
 							if not self._grbl:
-								self._commandQueue.put("M105")
+								self._commandQueue.put("M105")			
 							tempRequestTimeout = time.time() + timeoutAllowance
 
 						if 'ok' in line:

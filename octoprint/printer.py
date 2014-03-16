@@ -90,7 +90,9 @@ class Printer():
 			state={"state": None, "stateString": self.getStateString(), "flags": self._getStateFlags()},
 			jobData={"filename": None, "filesize": None, "estimatedPrintTime": None, "filament": None},
 			progress={"progress": None, "filepos": None, "printTime": None, "printTimeLeft": None},
-			currentZ=None
+			currentZ=None,
+			machinePosition="-",
+			workPosition="-"
 		)
 
 	#~~ callback handling
@@ -183,6 +185,7 @@ class Printer():
 		if self._selectedFile is None:
 			return
 
+		self._addPositionData(None, None)
 		self._setCurrentZ(None)
 		self._comm.startPrint()
 
@@ -281,6 +284,21 @@ class Printer():
 
 		self._stateMonitor.addTemperature({"currentTime": currentTimeUtc, "temp": self._temp, "bedTemp": self._bedTemp, "targetTemp": self._targetTemp, "targetBedTemp": self._targetBedTemp})
 
+
+	def _addPositionData(self, MPos, WPos):
+
+		if MPos is None or WPos is None:
+			MPosString = WPosString = "-"
+		else:
+			MPosString = "X: %.4f Y: %.4f Z: %.4f" % ( MPos[0], MPos[1], MPos[2] )
+			WPosString = "X: %.4f Y: %.4f Z: %.4f" % ( WPos[0], WPos[1], WPos[2] )
+
+		self._stateMonitor.setWorkPosition(WPosString)
+		self._stateMonitor.setMachinePosition(MPosString)
+		
+
+
+
 	def _setJobData(self, filename, filesize, sd):
 		if filename is not None:
 			self._selectedFile = {
@@ -353,6 +371,11 @@ class Printer():
 
 	def mcTempUpdate(self, temp, bedTemp, targetTemp, bedTargetTemp):
 		self._addTemperatureData(temp, bedTemp, targetTemp, bedTargetTemp)
+
+
+	def mcPosUpdate(self, MPos, WPos):
+		self._addPositionData(MPos, WPos)
+
 
 	def mcStateChange(self, state):
 		"""
@@ -614,6 +637,8 @@ class StateMonitor(object):
 		self._sdUploadData = None
 		self._currentZ = None
 		self._progress = None
+		self._machinePosition = None
+		self._workPosition = None
 
 		self._changeEvent = threading.Event()
 
@@ -622,11 +647,13 @@ class StateMonitor(object):
 		self._worker.daemon = True
 		self._worker.start()
 
-	def reset(self, state=None, jobData=None, progress=None, currentZ=None):
+	def reset(self, state=None, jobData=None, progress=None, currentZ=None, machinePosition=None, workPosition=None):
 		self.setState(state)
 		self.setJobData(jobData)
 		self.setProgress(progress)
 		self.setCurrentZ(currentZ)
+		self.setMachinePosition(machinePosition)
+		self.setWorkPosition(workPosition)
 
 	def addTemperature(self, temperature):
 		self._addTemperatureCallback(temperature)
@@ -656,6 +683,14 @@ class StateMonitor(object):
 		self._progress = progress
 		self._changeEvent.set()
 
+        def setWorkPosition(self, workPosition):
+		self._workPosition = workPosition
+		self._changeEvent.set()
+
+        def setMachinePosition(self, machinePosition):
+		self._machinePosition = machinePosition
+		self._changeEvent.set()
+
 	def _work(self):
 		while True:
 			self._changeEvent.wait()
@@ -674,6 +709,8 @@ class StateMonitor(object):
 	def getCurrentData(self):
 		return {
 			"state": self._state,
+			"machinePosition": self._machinePosition,
+			"workPosition": self._workPosition,
 			"job": self._jobData,
 			"currentZ": self._currentZ,
 			"progress": self._progress

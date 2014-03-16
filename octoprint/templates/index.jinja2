@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title data-bind="text: title">OctoPrint</title>
+        <title data-bind="text: title">{% if grblEnabled %}OctoCNC{%else%}OctoPrint{%endif%}</title>
 
         <link rel="shortcut icon" href="{{ url_for('static', filename='img/tentacle-32x32.png') }}">
         <link rel="apple-touch-icon" sizes="114x114" href="{{ url_for('static', filename='img/apple-touch-icon-114x114.png') }}">
@@ -35,7 +35,7 @@
         <div id="navbar" class="navbar navbar-fixed-top">
             <div class="navbar-inner" data-bind="css: appearance.color">
                 <div class="container">
-                    <a class="brand" href="#"> <span data-bind="text: appearance.brand">OctoPrint</span></a>
+                    <a class="brand" href="#"> <span data-bind="text: appearance.brand">OctoCNC</span></a>
                     <div class="nav-collapse">
                         <ul class="nav pull-right">
                             <li style="display: none;" data-bind="visible: loginState.isAdmin">
@@ -107,9 +107,13 @@
                         </div>
                         <div class="accordion-body collapse in" id="state">
                             <div class="accordion-inner">
-                                Machine State: <strong data-bind="text: stateString"></strong><br>
+                                Machine State: <br><strong data-bind="text: stateString"></strong><br>
+                                Work Position: <br><strong data-bind="text: workPosition"></strong><br>
+                                Machine Position: <br><strong data-bind="text: machinePosition"></strong><br><br>
                                 File: <strong data-bind="text: filename"></strong>&nbsp;<strong data-bind="visible: sd">(SD)</strong><br>
+				{% if not grblEnabled %}
                                 Filament: <strong data-bind="text: filament"></strong><br>
+				{% endif %}
                                 Estimated Print Time: <strong data-bind="text: estimatedPrintTime"></strong><br>
                                 Height: <strong data-bind="text: heightString"></strong><br>
                                 Print Time: <strong data-bind="text: printTime"></strong><br>
@@ -380,9 +384,15 @@
                                 <h1>General</h1>
                                 <div>
                                     <button class="btn control-box" data-bind="enable: isOperational() && !isPrinting() && loginState.isUser(), click: function() { $root.sendCustomCommand({type:'command',command:'M18'}) }"><i class="icon-off"></i>&nbsp;Motors off</button>
+                                    <button class="btn control-box" data-bind="enable: isOperational() && loginState.isUser(), click: function() { $root.sendCustomCommand({type:'command',command:'G92 X0 Y0 Z0'}) }">Reset home position</button>
+                                    {% if grblEnabled %}
+                                    <button class="btn control-box" data-bind="enable: isOperational() && loginState.isUser(), click: function() { $root.sendCustomCommand({type:'command',command:'$H'}) }">Homing</button>
+                                    <button class="btn control-box" data-bind="enable: isOperational() && loginState.isUser(), click: function() { $root.sendCustomCommand({type:'command',command:'$X'}) }">Unlock</button>
+                                    {% else %}
                                     <button class="btn control-box" data-bind="enable: isOperational() && loginState.isUser(), click: function() { $root.sendCustomCommand({type:'command',command:'M106'}) }">Fans on</button>
                                     <button class="btn control-box" data-bind="enable: isOperational() && loginState.isUser(), click: function() { $root.sendCustomCommand({type:'command',command:'M106 S0'}) }">Fans off</button>
-                                    <button class="btn control-box" data-bind="enable: isOperational() && loginState.isUser(), click: function() { $root.sendCustomCommand({type:'command',command:'G92 X0 Y0 Z0'}) }">Reset home position</button>
+                                    {% endif %}
+
                                 </div>
                             </div>
 

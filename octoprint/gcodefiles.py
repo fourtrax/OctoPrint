@@ -155,7 +155,7 @@ class GcodeManager:
 		"""
 		filename = self._getBasicFilename(filename)
 
-		if not util.isAllowedFile(filename, set(["gcode"])):
+		if not util.isAllowedFile(filename, set(["gcode", "nc"])):
 			return None
 
 		secure = os.path.join(self._uploadFolder, secure_filename(self._getBasicFilename(filename)))

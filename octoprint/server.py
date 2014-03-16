@@ -197,7 +197,11 @@ def printerCommand():
 				commandToSend = command % parameters
 			commandsToSend.append(commandToSend)
 
+		if settings().getBoolean(["feature", "grbl"]):
+			commandsToSend.append("?")
 		printer.commands(commandsToSend)
+
+		
 
 	return jsonify(SUCCESS)
 
@@ -258,6 +262,10 @@ def jog():
 		# extrude/retract
 		length = request.values["extrude"]
 		printer.commands(["G91", "G1 E%s F%d" % (length, movementSpeedE), "G90"])
+
+	if settings().getBoolean(["feature", "grbl"]):
+		printer.command("?") # start position updates
+	
 
 	return jsonify(SUCCESS)
 

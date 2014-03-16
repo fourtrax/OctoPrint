@@ -206,6 +206,10 @@ function PrinterStateViewModel(loginStateViewModel) {
     self.loginState = loginStateViewModel;
 
     self.stateString = ko.observable(undefined);
+
+    self.workPosition = ko.observable(undefined);
+    self.machinePosition = ko.observable(undefined);
+
     self.isErrorOrClosed = ko.observable(undefined);
     self.isOperational = ko.observable(undefined);
     self.isPrinting = ko.observable(undefined);
@@ -264,6 +268,10 @@ function PrinterStateViewModel(loginStateViewModel) {
         self._processJobData(data.job);
         self._processProgressData(data.progress);
         self._processZData(data.currentZ);
+
+        self.workPosition(data.workPosition);
+        self.machinePosition(data.machinePosition);
+
     }
 
     self._processStateData = function(data) {
@@ -1834,16 +1842,16 @@ function AppearanceViewModel(settingsViewModel) {
 
     self.brand = ko.computed(function() {
         if (self.name())
-            return "OctoPrint: " + self.name();
+            return "OctoCNC: " + self.name();
         else
-            return "OctoPrint";
+            return "OctoCNC";
     })
 
     self.title = ko.computed(function() {
         if (self.name())
-            return self.name() + " [OctoPrint]";
+            return self.name() + " [OctoCNC]";
         else
-            return "OctoPrint";
+            return "OctoCNC";
     })
 }
 
