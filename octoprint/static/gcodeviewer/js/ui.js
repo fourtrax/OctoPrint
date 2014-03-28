@@ -52,15 +52,15 @@ GCODE.ui = (function(){
         output.push("Layer number: " + layerNum);
         output.push("Layer height (mm): " + z);
         output.push("GCODE commands in layer: " + segments);
-        output.push("Filament used by layer (mm): " + filament.toFixed(2));
+//        output.push("Filament used by layer (mm): " + filament.toFixed(2));
         output.push("Print time for layer: " + parseFloat(GCODE.gCodeReader.getModelInfo().printTimeByLayer[z]).toFixed(1) + "sec");
-        output.push("Extrude speeds:");
-        for(i=0;i<layerSpeeds['extrude'][z].length;i++){
-            if(typeof(layerSpeeds['extrude'][z][i])==='undefined'){continue;}
-            speedIndex = i;
-            if(speedIndex > colors.length -1){speedIndex = speedIndex % (colors.length-1);}
-            output.push("<div id='colorBox"+i+"' class='colorBox' style='background-color: "+colors[speedIndex] + "'></div>  = " + (parseFloat(layerSpeeds['extrude'][z][i])/60).toFixed(2)+"mm/s");
-        }
+//        output.push("Extrude speeds:");
+//        for(i=0;i<layerSpeeds['extrude'][z].length;i++){
+//            if(typeof(layerSpeeds['extrude'][z][i])==='undefined'){continue;}
+//            speedIndex = i;
+//            if(speedIndex > colors.length -1){speedIndex = speedIndex % (colors.length-1);}
+//            output.push("<div id='colorBox"+i+"' class='colorBox' style='background-color: "+colors[speedIndex] + "'></div>  = " + (parseFloat(layerSpeeds['extrude'][z][i])/60).toFixed(2)+"mm/s");
+//        }
         if(typeof(layerSpeeds['move'][z]) !== 'undefined'){
             output.push("Move speeds:");
             for(i=0;i<layerSpeeds['move'][z].length;i++){
@@ -304,8 +304,9 @@ GCODE.ui = (function(){
             if(document.getElementById('sortLayersCheckbox').checked)GCODE.gCodeReader.setOption({sortLayers: true});
             else GCODE.gCodeReader.setOption({sortLayers: false});
 
-            if(document.getElementById('purgeEmptyLayersCheckbox').checked)GCODE.gCodeReader.setOption({purgeEmptyLayers: true});
-            else GCODE.gCodeReader.setOption({purgeEmptyLayers: false});
+           // if(document.getElementById('purgeEmptyLayersCheckbox').checked)GCODE.gCodeReader.setOption({purgeEmptyLayers: true});
+           // else 
+	   GCODE.gCodeReader.setOption({purgeEmptyLayers: false});
 
             if(document.getElementById('showGCodeCheckbox').checked)showGCode = true;
             else showGCode = false;
@@ -338,8 +339,9 @@ GCODE.ui = (function(){
             if(document.getElementById('thickExtrusionCheckbox').checked)GCODE.renderer.setOption({extrusionWidth: widthMod});
             else GCODE.renderer.setOption({extrusionWidth: 1});
 
-            if(document.getElementById('showNextLayer').checked)GCODE.renderer.setOption({showNextLayer: true});
-            else GCODE.renderer.setOption({showNextLayer: false});
+            //if(document.getElementById('showNextLayer').checked)GCODE.renderer.setOption({showNextLayer: true});
+            //else GCODE.renderer.setOption({showNextLayer: false});
+	    GCODE.renderer.setOption({showNextLayer: true});
         }
     }
 }());

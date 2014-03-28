@@ -85,6 +85,10 @@ GCODE.renderer = (function(){
         };
         var translate = ctx.translate;
         ctx.translate = function(dx,dy){
+	    if(isNaN(dx) || isNaN(dy)){
+			dx = 0;
+			dy = 0;
+		}
             xform = xform.translate(dx,dy);
             return translate.call(ctx,dx,dy);
         };
@@ -294,7 +298,9 @@ GCODE.renderer = (function(){
                     }
                 }
                 if(renderOptions["showMoves"]){
-                    ctx.strokeStyle = renderOptions["colorMove"];
+
+		    ctx.strokeStyle = renderOptions["colorLine"][renderOptions["colorLine"].length % layerNum];
+                    //ctx.strokeStyle = renderOptions["colorMove"];
                     ctx.beginPath();
                     ctx.moveTo(prevX, prevY);
                     ctx.lineTo(x*zoomFactor,y*zoomFactor);
@@ -398,9 +404,11 @@ GCODE.renderer = (function(){
 //            console.log(mdlInfo.min.x + ' ' + mdlInfo.modelSize.x);
             offsetModelX = (gridSizeX/2-(mdlInfo.min.x+mdlInfo.modelSize.x/2))*zoomFactor;
             offsetModelY = (mdlInfo.min.y+mdlInfo.modelSize.y/2)*zoomFactor-gridSizeY/2*zoomFactor;
+
             if(ctx)ctx.translate(offsetModelX, offsetModelY);
 
-            this.render(layerNum, 0, model[layerNum].length);
+	    layerLength = model[layerNum].length;
+	    this.render(layerNum, 0, layerLength);
         },
         getZ: function(layerNum){
             if(!model&&!model[layerNum]){

@@ -126,7 +126,7 @@
             for(j=0;j<cmds.length;j++){
                 x_ok=false;
                 y_ok=false;
-                if(typeof(cmds[j].x) !== 'undefined'&&typeof(cmds[j].prevX) !== 'undefined'&&typeof(cmds[j].extrude) !== 'undefined'&&cmds[j].extrude&&!isNaN(cmds[j].x))
+                if(typeof(cmds[j].x) !== 'undefined'&&typeof(cmds[j].prevX) !== 'undefined'&&!isNaN(cmds[j].x))
                 {
                     max.x = parseFloat(max.x)>parseFloat(cmds[j].x)?parseFloat(max.x):parseFloat(cmds[j].x);
                     max.x = parseFloat(max.x)>parseFloat(cmds[j].prevX)?parseFloat(max.x):parseFloat(cmds[j].prevX);
@@ -135,7 +135,7 @@
                     x_ok=true;
                 }
 
-                if(typeof(cmds[j].y) !== 'undefined'&&typeof(cmds[j].prevY) !== 'undefined'&&typeof(cmds[j].extrude) !== 'undefined'&&cmds[j].extrude&&!isNaN(cmds[j].y)){
+                if(typeof(cmds[j].y) !== 'undefined'&&typeof(cmds[j].prevY) !== 'undefined'&&!isNaN(cmds[j].y)){
                     max.y = parseFloat(max.y)>parseFloat(cmds[j].y)?parseFloat(max.y):parseFloat(cmds[j].y);
                     max.y = parseFloat(max.y)>parseFloat(cmds[j].prevY)?parseFloat(max.y):parseFloat(cmds[j].prevY);
                     min.y = parseFloat(min.y)<parseFloat(cmds[j].y)?parseFloat(min.y):parseFloat(cmds[j].y);
@@ -143,7 +143,7 @@
                     y_ok=true;
                 }
 
-                if(typeof(cmds[j].prevZ) !== 'undefined'&&typeof(cmds[j].extrude) !== 'undefined'&&cmds[j].extrude&&!isNaN(cmds[j].prevZ)){
+                if(typeof(cmds[j].prevZ) !== 'undefined'&&!isNaN(cmds[j].prevZ)){
                     max.z = parseFloat(max.z)>parseFloat(cmds[j].prevZ)?parseFloat(max.z):parseFloat(cmds[j].prevZ);
                     min.z = parseFloat(min.z)<parseFloat(cmds[j].prevZ)?parseFloat(min.z):parseFloat(cmds[j].prevZ);
                 }
@@ -216,7 +216,7 @@
         var sendMultiLayerZ = [];
         var lastSend = 0;
     //            console.time("parseGCode timer");
-        var reg = new RegExp(/^(?:G0|G1)\s/i);
+        var reg = new RegExp(/^(?:G0|G1|G01|G00)\s/i);
         var comment = new RegExp()
         var j, layer= 0, extrude=false, prevRetract= 0, retract=0, x, y, z=0, f, prevZ=0, prevX, prevY,lastF=4000, prev_extrude = {a: undefined, b: undefined, c: undefined, e: undefined, abs: undefined}, extrudeRelative=false;
         var dcExtrude=false;
